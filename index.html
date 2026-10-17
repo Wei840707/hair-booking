@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>線上預約</title>
+<meta name="description" content="髮型設計線上預約">
+<style>
+:root{
+  --bg:#faf7f2; --card:#ffffff; --ink:#2b2622; --muted:#7a7068; --line:#e7e0d6;
+  --accent:#a8553b; --accent-ink:#ffffff; --accent-soft:#f6e6df; --off:#efeae2; --danger:#b3261e;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#1b1815; --card:#262220; --ink:#f2ece4; --muted:#a69b90; --line:#3a342f;
+    --accent:#d98466; --accent-ink:#1b1815; --accent-soft:#3b2a24; --off:#2f2a26; --danger:#f2b8b5; }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
+  line-height:1.55;font-size:16px}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 120px}
+h1{font-size:24px;margin:8px 0 4px;letter-spacing:.02em}
+.sub{color:var(--muted);margin:0 0 20px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;
+  background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{flex:1 1 0;min-width:84px}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt span{display:block;text-align:center;padding:12px 10px;border:1.5px solid var(--line);border-radius:12px;
+  cursor:pointer;background:var(--card);transition:.12s;user-select:none}
+.opt input:checked + span{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.opt input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.hint{color:var(--muted);font-size:13px;margin:10px 0 0}
+.stepper{display:flex;align-items:center;gap:14px}
+.stepper button{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);
+  color:var(--ink);font-size:22px;cursor:pointer}
+.stepper button:disabled{opacity:.35;cursor:not-allowed}
+.stepper output{min-width:64px;text-align:center;font-size:18px;font-weight:600}
+
+/* calendar */
+.cal-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.dow,.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow div{text-align:center;font-size:12px;color:var(--muted);padding:2px 0}
+.mon{grid-column:1/-1;font-size:13px;font-weight:600;margin:12px 0 2px;color:var(--ink)}
+.day{aspect-ratio:1/1;border-radius:10px;border:1.5px solid transparent;background:var(--card);
+  color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font:inherit;font-size:15px;padding:0}
+.day small{font-size:10px;color:var(--muted);line-height:1}
+.day.off{background:var(--off);color:var(--muted);cursor:not-allowed;text-decoration:none}
+.day.off small{color:var(--muted)}
+.day.sel{border-color:var(--accent);background:var(--accent);color:var(--accent-ink);font-weight:700}
+.day.sel small{color:var(--accent-ink)}
+.day.blank{visibility:hidden}
+.day:not(.off):not(.sel):hover{border-color:var(--accent)}
+
+.times{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.time{padding:11px 0;border-radius:10px;border:1.5px solid var(--line);background:var(--card);
+  color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
+.time.sel{border-color:var(--accent);background:var(--accent);color:var(--accent-ink);font-weight:700}
+.time:hover:not(.sel){border-color:var(--accent)}
+
+label.f{display:block;font-size:14px;margin:0 0 12px}
+label.f b{display:block;margin-bottom:4px;font-weight:600}
+input[type=text],input[type=tel],textarea{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:10px;
+  background:var(--card);color:var(--ink);font:inherit;font-size:16px}
+input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+textarea{resize:vertical;min-height:64px}
+.hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+
+.summary{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:12px}
+.summary strong{display:block;font-size:16px}
+.btn{width:100%;padding:15px;border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);
+  font:inherit;font-size:17px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.err{color:var(--danger);font-size:14px;margin:10px 0 0;min-height:1em}
+.priv{font-size:12px;color:var(--muted);margin:10px 0 0}
+.done{text-align:center;padding:28px 18px}
+.done .ck{width:56px;height:56px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-size:30px;margin:0 auto 12px}
+.done dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;text-align:left;
+  background:var(--accent-soft);border-radius:12px;padding:14px;margin:16px 0}
+.done dt{color:var(--muted)} .done dd{margin:0;font-weight:600}
+.loading{text-align:center;color:var(--muted);padding:60px 0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title">線上預約</h1>
+  <p class="sub">選好項目與時間，送出即完成預約。</p>
+
+  <div id="loading" class="loading">載入中…</div>
+  <div id="fatal" class="card" hidden></div>
+
+  <form id="form" hidden autocomplete="on" novalidate>
+    <div class="card">
+      <h2><span class="num">1</span>預約對象</h2>
+      <div class="opts" id="gender">
+        <label class="opt"><input type="radio" name="gender" value="female"><span>女生</span></label>
+        <label class="opt"><input type="radio" name="gender" value="male"><span>男生</span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">2</span>服務項目 <small style="color:var(--muted);font-weight:400">可複選</small></h2>
+      <div class="opts" id="services"></div>
+      <p class="hint" id="durHint"></p>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">3</span>人數</h2>
+      <div class="stepper">
+        <button type="button" id="minus" aria-label="減少">−</button>
+        <output id="people">1 位</output>
+        <button type="button" id="plus" aria-label="增加">+</button>
+      </div>
+      <p class="hint">幫家人朋友一起預約時，請填總人數。</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">4</span>選擇日期</h2>
+      <div class="dow"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div>
+      <div class="days" id="days"></div>
+      <p class="hint">灰色日期為公休或已滿。</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">5</span>選擇時段</h2>
+      <div id="timesWrap"><p class="hint" style="margin:0">請先選擇日期。</p></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">6</span>聯絡資料</h2>
+      <label class="f"><b>姓名</b><input type="text" id="name" name="name" autocomplete="name" maxlength="30" required></label>
+      <label class="f"><b>手機</b><input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" maxlength="16" placeholder="0912345678" required></label>
+      <label class="f"><b>備註（選填）</b><textarea id="note" maxlength="200" placeholder="例如：想剪的長度、同行者性別等"></textarea></label>
+      <input class="hp" type="text" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <p class="priv">姓名與電話僅供設計師確認預約使用。</p>
+    </div>
+
+    <div class="summary" id="summary" hidden></div>
+    <button class="btn" id="submit" type="submit" disabled>送出預約</button>
+    <p class="err" id="err" role="alert"></p>
+  </form>
+
+  <div id="done" class="card done" hidden></div>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const SVC = { cut:'剪髮', perm:'燙髮', dye:'染髮' };
+const WD = ['日','一','二','三','四','五','六'];
+const API = (window.APP_CONFIG||{}).API_URL;
+
+let cfg, busy = {}, closedSet = new Set(), now = {date:'', min:0};
+const st = { gender:'', services:new Set(), people:1, date:'', start:null };
+
+const pad = n => String(n).padStart(2,'0');
+const fmtT = m => pad(Math.floor(m/60)) + ':' + pad(m%60);
+function addDays(ds,n){ const [y,m,d]=ds.split('-').map(Number); return new Date(Date.UTC(y,m-1,d+n)).toISOString().slice(0,10); }
+function wd(ds){ const [y,m,d]=ds.split('-').map(Number); return new Date(Date.UTC(y,m-1,d)).getUTCDay(); }
+function label(ds){ return Number(ds.slice(5,7)) + '/' + Number(ds.slice(8)) + '（' + WD[wd(ds)] + '）'; }
+
+function perHead(){ let p=0; st.services.forEach(k=>p+=cfg.dur[k]); return p; }
+function totalMin(){ return perHead()*st.people; }
+function probeMin(){ return (st.services.size ? perHead() : Math.min.apply(null, Object.values(cfg.dur))) * st.people; }
+function isClosed(ds){ return cfg.closedWeekdays.indexOf(wd(ds))>=0 || closedSet.has(ds); }
+function freeStarts(ds,total){
+  const out=[]; if(isClosed(ds)) return out;
+  const b = busy[ds]||[];
+  const minStart = ds===now.date ? now.min + cfg.minLeadHours*60 : 0;
+  for(let s=cfg.open; s+total<=cfg.close; s+=cfg.step){
+    if(s<minStart) continue;
+    const e=s+total;
+    if(b.some(x => s<x[1] && x[0]<e)) continue;
+    out.push(s);
+  }
+  return out;
+}
+const durText = m => (m>=60 ? Math.floor(m/60)+' 小時' : '') + (m%60 ? (m>=60?' ':'')+(m%60)+' 分鐘' : '');
+
+async function load(){
+  if(!API || API.indexOf('PASTE_')===0) throw new Error('尚未設定 API 網址');
+  const r = await fetch(API + '?action=availability', {cache:'no-store'});
+  const j = await r.json();
+  if(!j.ok) throw new Error(j.message || j.error);
+  cfg = j.config; now = j.now; busy = j.busy || {}; closedSet = new Set(j.closedDates||[]);
+}
+
+function build(){
+  $('#title').textContent = cfg.shopName || '線上預約';
+  document.title = (cfg.shopName || '線上預約');
+  $('#services').innerHTML = Object.keys(SVC).map(k =>
+    `<label class="opt"><input type="checkbox" name="svc" value="${k}"><span>${SVC[k]}<br><small style="color:var(--muted)">約 ${durText(cfg.dur[k])}</small></span></label>`).join('');
+  render();
+}
+
+function render(){
+  // 時間不再可行就清掉已選時段
+  if(st.date && st.start!==null){
+    if(freeStarts(st.date,totalMin()).indexOf(st.start)<0 || !st.services.size){ st.start=null; }
+  }
+  $('#people').textContent = st.people + ' 位';
+  $('#minus').disabled = st.people<=1;
+  $('#plus').disabled = st.people>=cfg.maxPeople;
+  $('#durHint').textContent = st.services.size ? `預計需要 ${durText(totalMin())}（${st.people} 位）` : '';
+  renderDays(); renderTimes(); renderSummary();
+}
+
+function renderDays(){
+  const box = $('#days'); box.innerHTML='';
+  const first = now.date, last = addDays(now.date, cfg.advanceDays);
+  const probe = probeMin();
+  let curMonth='';
+  for(let ds=first; ds<=last; ds=addDays(ds,1)){
+    const mo = ds.slice(0,7);
+    if(mo!==curMonth){
+      curMonth=mo;
+      // 月份標題佔滿一整列（grid 會自動換行），再補上該月第一天前的空格
+      const h=document.createElement('div'); h.className='mon'; h.textContent = Number(ds.slice(5,7))+' 月';
+      box.appendChild(h);
+      for(let k=0;k<wd(ds);k++){ const b=document.createElement('div'); b.className='day blank'; box.appendChild(b); }
+    }
+    const btn=document.createElement('button'); btn.type='button'; btn.className='day';
+    btn.innerHTML = `${Number(ds.slice(8))}`;
+    const closed = isClosed(ds);
+    const full = !closed && freeStarts(ds,probe).length===0;
+    if(closed || full){ btn.classList.add('off'); btn.disabled=true; btn.innerHTML += `<small>${closed?'公休':'已滿'}</small>`; }
+    if(ds===st.date) btn.classList.add('sel');
+    btn.setAttribute('aria-label', label(ds));
+    btn.onclick = () => { st.date=ds; st.start=null; render(); const t=$('#timesWrap'); if(t.scrollIntoView) t.scrollIntoView({behavior:'smooth',block:'nearest'}); };
+    box.appendChild(btn);
+  }
+}
+
+function renderTimes(){
+  const w = $('#timesWrap');
+  if(!st.date){ w.innerHTML='<p class="hint" style="margin:0">請先選擇日期。</p>'; return; }
+  if(!st.services.size){ w.innerHTML='<p class="hint" style="margin:0">請先選擇服務項目，才能算出可預約的時段。</p>'; return; }
+  const total = totalMin();
+  const starts = freeStarts(st.date,total);
+  if(!starts.length){ w.innerHTML='<p class="hint" style="margin:0">這天沒有足夠的連續空檔，請換一天或減少項目／人數。</p>'; return; }
+  w.innerHTML = `<p class="hint" style="margin:0 0 10px">${label(st.date)} 可預約開始時間：</p><div class="times"></div>`;
+  const grid = w.querySelector('.times');
+  starts.forEach(s=>{
+    const b=document.createElement('button'); b.type='button'; b.className='time'+(s===st.start?' sel':''); b.textContent=fmtT(s);
+    b.onclick=()=>{ st.start=s; render(); };
+    grid.appendChild(b);
+  });
+}
+
+function renderSummary(){
+  const s=$('#summary'), ok = st.gender && st.services.size && st.date && st.start!==null;
+  if(ok){
+    s.hidden=false;
+    s.innerHTML = `<strong>${label(st.date)} ${fmtT(st.start)} – ${fmtT(st.start+totalMin())}</strong>${st.gender==='female'?'女生':'男生'}・${[...st.services].map(k=>SVC[k]).join('＋')}・${st.people} 位`;
+  } else s.hidden=true;
+  $('#submit').disabled = !ok;
+}
+
+/* events */
+document.addEventListener('change', e=>{
+  if(e.target.name==='gender'){ st.gender=e.target.value; render(); }
+  if(e.target.name==='svc'){ e.target.checked ? st.services.add(e.target.value) : st.services.delete(e.target.value); render(); }
+});
+$('#minus').onclick=()=>{ if(st.people>1){ st.people--; render(); } };
+$('#plus').onclick=()=>{ if(st.people<cfg.maxPeople){ st.people++; render(); } };
+
+const ERR = {
+  slot_taken:'抱歉，這個時段剛剛被預約走了，請重新選擇。',
+  closed:'這天公休，請換一天。', too_late:'這個時段已來不及預約，請選其他時間。',
+  out_of_range:'超出可預約的日期範圍。', bad_time:'時段不正確，請重新選擇。',
+  bad_phone:'手機格式不正確，請重新確認。', need_name:'請填寫姓名。', bad_input:'資料不完整，請檢查後再送出。', spam:'無法送出。'
+};
+
+$('#form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const err=$('#err'); err.textContent='';
+  const name=$('#name').value.trim(), phone=$('#phone').value.trim();
+  if(!name){ err.textContent=ERR.need_name; $('#name').focus(); return; }
+  if(!/^[0-9+\-\s()]{8,16}$/.test(phone)){ err.textContent=ERR.bad_phone; $('#phone').focus(); return; }
+  const btn=$('#submit'); btn.disabled=true; btn.textContent='送出中…';
+  try{
+    const r = await fetch(API, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'book', date:st.date, start:fmtT(st.start), gender:st.gender,
+        services:[...st.services], people:st.people, name, phone, note:$('#note').value.trim(), website:$('#website').value }) });
+    const j = await r.json();
+    if(j.ok){ showDone(j.booking); return; }
+    err.textContent = ERR[j.error] || ('送出失敗：' + (j.message||j.error));
+    if(j.error==='slot_taken' || j.error==='too_late' || j.error==='closed'){ await load(); st.start=null; render(); }
+  }catch(x){ err.textContent='網路異常，請稍後再試。'; }
+  btn.textContent='送出預約'; renderSummary();
+});
+
+function showDone(b){
+  $('#form').hidden=true;
+  const d=$('#done'); d.hidden=false;
+  d.innerHTML = `<div class="ck">✓</div><h2 style="font-size:20px;margin:0 0 4px;display:block">預約完成</h2>
+    <p class="sub" style="margin:0">設計師已收到你的預約。</p>
+    <dl><dt>日期</dt><dd>${label(b.date)}</dd><dt>時間</dt><dd>${b.start} – ${b.end}</dd>
+    <dt>項目</dt><dd>${b.gender}・${b.services}</dd><dt>人數</dt><dd>${b.people} 位</dd></dl>
+    <p class="hint">如需更改或取消，請直接聯絡設計師。<br>建議截圖保存此畫面。</p>`;
+  window.scrollTo(0,0);
+}
+
+load().then(()=>{ $('#loading').hidden=true; $('#form').hidden=false; build(); })
+ .catch(x=>{ $('#loading').hidden=true; const f=$('#fatal'); f.hidden=false; f.textContent='目前無法載入預約資訊，請稍後再試。（'+x.message+'）'; });
+})();
+</script>
+</body>
+</html>

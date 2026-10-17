@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>預約後台</title>
+<style>
+:root{
+  --bg:#faf7f2; --card:#fff; --ink:#2b2622; --muted:#7a7068; --line:#e7e0d6;
+  --accent:#a8553b; --accent-ink:#fff; --accent-soft:#f6e6df; --block:#5f7a8a; --block-soft:#e6edf1; --danger:#b3261e; --off:#efeae2;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#1b1815; --card:#262220; --ink:#f2ece4; --muted:#a69b90; --line:#3a342f;
+    --accent:#d98466; --accent-ink:#1b1815; --accent-soft:#3b2a24; --block:#8fb0c2; --block-soft:#26323a; --danger:#f2b8b5; --off:#2f2a26; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.5;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:16px 16px 80px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+h1{font-size:20px;margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}
+.tabs button{flex:1;white-space:nowrap;padding:10px 12px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button.btn{padding:11px 16px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer}
+button.btn:disabled{opacity:.5}
+button.ghost{padding:7px 12px;border:1.5px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+button.danger{color:var(--danger);border-color:var(--danger)}
+input,select,textarea{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:16px}
+label.f{display:block;font-size:14px;margin-bottom:10px}
+label.f b{display:block;margin-bottom:3px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.day-h{font-weight:700;margin:16px 0 6px;display:flex;gap:8px;align-items:center}
+.day-h:first-child{margin-top:0}
+.tag{font-size:12px;padding:1px 8px;border-radius:99px;background:var(--off);color:var(--muted);font-weight:400}
+.item{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;border-left:4px solid var(--accent);background:var(--card);
+  border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.item.block{border-left-color:var(--block)}
+.item .t{font-weight:700;font-variant-numeric:tabular-nums}
+.item .m{font-size:14px;color:var(--muted)}
+.item a{color:var(--accent);font-weight:600;text-decoration:none}
+.empty{color:var(--muted);text-align:center;padding:30px 0}
+.wds{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:8px 0 12px}
+.wds label{text-align:center}
+.wds input{position:absolute;opacity:0}
+.wds span{display:block;padding:10px 0;border:1.5px solid var(--line);border-radius:10px;cursor:pointer}
+.wds input:checked + span{background:var(--off);color:var(--muted);border-color:var(--muted);text-decoration:line-through}
+.hint{font-size:13px;color:var(--muted);margin:4px 0 10px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;max-width:90vw}
+.toast.show{opacity:1}
+.login{max-width:360px;margin:12vh auto}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 10px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div id="login" class="login card" hidden>
+  <h1 style="margin-bottom:12px">預約後台</h1>
+  <label class="f"><b>密碼</b><input type="password" id="pw" autocomplete="current-password"></label>
+  <button class="btn" id="loginBtn" style="width:100%">登入</button>
+  <p class="hint" id="loginErr" style="color:var(--danger)"></p>
+</div>
+
+<div id="app" hidden>
+  <header><h1>預約後台</h1><button class="ghost" id="logout">登出</button></header>
+  <div class="tabs" id="tabs">
+    <button data-t="sched" class="on">行程</button>
+    <button data-t="block">保留時段</button>
+    <button data-t="closed">休假</button>
+    <button data-t="set">設定</button>
+  </div>
+
+  <section id="t-sched"></section>
+
+  <section id="t-block" hidden>
+    <div class="card">
+      <p class="hint" style="margin-top:0">私訊預約或臨時有事時，在這裡把時段「保留」起來，預約頁會立刻顯示為已滿。</p>
+      <div class="row">
+        <label class="f"><b>日期</b><input type="date" id="bDate"></label>
+        <label class="f"><b>開始時間</b><select id="bStart"></select></label>
+      </div>
+      <div class="row">
+        <label class="f"><b>長度</b><select id="bLen"></select></label>
+        <label class="f"><b>備註（只有你看得到）</b><input type="text" id="bReason" placeholder="例如：IG 私訊 王小姐 染髮" maxlength="100"></label>
+      </div>
+      <div class="presets" id="presets"></div>
+      <button class="btn" id="bAdd">保留這個時段</button>
+    </div>
+  </section>
+
+  <section id="t-closed" hidden>
+    <div class="card">
+      <b>固定公休（每週）</b>
+      <p class="hint">點選的星期會變成公休（劃線）。</p>
+      <div class="wds" id="wds"></div>
+      <button class="btn" id="wdSave">儲存公休設定</button>
+    </div>
+    <div class="card">
+      <b>特定日期不開放</b>
+      <div class="row" style="margin-top:8px">
+        <label class="f"><b>日期</b><input type="date" id="cDate"></label>
+        <label class="f"><b>原因（選填）</b><input type="text" id="cReason" maxlength="100"></label>
+      </div>
+      <button class="btn" id="cAdd">整天不開放</button>
+      <div id="cList" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section id="t-set" hidden>
+    <div class="card" id="setForm"></div>
+  </section>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const API = (window.APP_CONFIG||{}).API_URL;
+const WD = ['日','一','二','三','四','五','六'];
+const SVC_LABEL = {};
+let pw = '', data = null;
+
+const pad = n => String(n).padStart(2,'0');
+const fmtT = m => pad(Math.floor(m/60)) + ':' + pad(m%60);
+const toMin = h => { const [a,b] = h.split(':').map(Number); return a*60+b; };
+function wd(ds){ const [y,m,d]=ds.split('-').map(Number); return new Date(Date.UTC(y,m-1,d)).getUTCDay(); }
+function label(ds){ return Number(ds.slice(5,7))+'/'+Number(ds.slice(8))+'（'+WD[wd(ds)]+'）'; }
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast.h); toast.h=setTimeout(()=>el.classList.remove('show'),2200); }
+
+async function call(action, extra){
+  if(!API || API.indexOf('PASTE_')===0) throw new Error('尚未設定 API 網址');
+  const r = await fetch(API, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(Object.assign({action, pw}, extra||{})) });
+  return r.json();
+}
+
+/* login */
+async function tryLogin(silent){
+  $('#loginErr').textContent='';
+  try{
+    const j = await call('adminLogin');
+    if(j.ok){ try{ sessionStorage.setItem('adm_pw', pw); }catch(e){} $('#login').hidden=true; $('#app').hidden=false; await refresh(); return; }
+    if(j.error==='no_password_set') $('#loginErr').textContent='尚未在 Apps Script 設定 ADMIN_PASSWORD。';
+    else if(!silent) $('#loginErr').textContent='密碼錯誤。';
+  }catch(e){ if(!silent) $('#loginErr').textContent='連線失敗：'+e.message; }
+  $('#login').hidden=false; $('#app').hidden=true;
+}
+$('#loginBtn').onclick = () => { pw = $('#pw').value; tryLogin(false); };
+$('#pw').addEventListener('keydown', e => { if(e.key==='Enter') $('#loginBtn').click(); });
+$('#logout').onclick = () => { try{ sessionStorage.removeItem('adm_pw'); }catch(e){} pw=''; $('#app').hidden=true; $('#login').hidden=false; $('#pw').value=''; };
+
+async function refresh(){
+  const j = await call('adminList');
+  if(!j.ok){ toast('讀取失敗：'+(j.message||j.error)); return; }
+  data = j;
+  renderSched(); renderBlockForm(); renderClosed(); renderSettings();
+}
+
+/* tabs */
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x===b));
+  ['sched','block','closed','set'].forEach(t => { $('#t-'+t).hidden = (t !== b.dataset.t); });
+});
+
+/* schedule */
+function renderSched(){
+  const cfg = data.config;
+  const closedDates = new Set(data.closedDates.map(c=>c.date));
+  const byDate = {};
+  data.bookings.forEach(b => (byDate[b.date] = byDate[b.date]||[]).push(Object.assign({kind:'b'}, b)));
+  data.blocks.forEach(b => (byDate[b.date] = byDate[b.date]||[]).push(Object.assign({kind:'k'}, b)));
+  data.closedDates.forEach(c => { byDate[c.date] = byDate[c.date]||[]; });
+  const dates = Object.keys(byDate).sort();
+  const box = $('#t-sched');
+  if(!dates.length){ box.innerHTML = '<div class="empty">目前沒有預約。</div>'; return; }
+  box.innerHTML = dates.map(d => {
+    const items = byDate[d].sort((a,b)=> (a.start||'').localeCompare(b.start||''));
+    const tags = (d===data.now.date?'<span class="tag" style="background:var(--accent-soft);color:var(--accent)">今天</span>':'') + (closedDates.has(d)?'<span class="tag">整天不開放</span>':'');
+    return `<div class="day-h">${label(d)} ${tags}</div>` + (items.length? items.map(it => it.kind==='b' ? bookingHtml(it) : blockHtml(it)).join('') : '');
+  }).join('');
+  box.querySelectorAll('[data-cancel]').forEach(b => b.onclick = async () => {
+    if(!confirm('確定取消這筆預約？取消後時段會重新開放。')) return;
+    const j = await call('adminCancel',{id:b.dataset.cancel}); toast(j.ok?'已取消':'失敗'); refresh();
+  });
+  box.querySelectorAll('[data-delblock]').forEach(b => b.onclick = async () => {
+    if(!confirm('確定釋出這個保留時段？')) return;
+    const j = await call('adminDeleteBlock',{id:b.dataset.delblock}); toast(j.ok?'已釋出':'失敗'); refresh();
+  });
+}
+function bookingHtml(b){
+  return `<div class="item"><div><div class="t">${b.start} – ${b.end}　${esc(b.name)}</div>
+    <div class="m">${esc(b.gender)}・${esc(b.services)}・${esc(b.people)} 位</div>
+    <div class="m"><a href="tel:${esc(b.phone)}">${esc(b.phone)}</a></div>
+    ${b.note?`<div class="m">備註：${esc(b.note)}</div>`:''}</div>
+    <button class="ghost danger" data-cancel="${esc(b.id)}">取消</button></div>`;
+}
+function blockHtml(b){
+  return `<div class="item block"><div><div class="t">${b.start} – ${b.end}　已保留</div>
+    <div class="m">${esc(b.reason)||'（無備註）'}</div></div>
+    <button class="ghost" data-delblock="${esc(b.id)}">釋出</button></div>`;
+}
+
+/* block form */
+let blockInit = false;
+function renderBlockForm(){
+  const cfg = data.config;
+  const today = data.now.date;
+  $('#bDate').min = today; if(!$('#bDate').value) $('#bDate').value = today;
+  let o=''; for(let s=cfg.open; s<cfg.close; s+=cfg.step) o += `<option value="${fmtT(s)}">${fmtT(s)}</option>`;
+  const keep = $('#bStart').value; $('#bStart').innerHTML = o; if(keep) $('#bStart').value = keep;
+  let l=''; for(let m=cfg.step; m<=cfg.close-cfg.open; m+=cfg.step){ l += `<option value="${m}">${m>=60?Math.floor(m/60)+' 小時':''}${m%60?(m>=60?' ':'')+m%60+' 分':''}</option>`; }
+  const keepL = $('#bLen').value; $('#bLen').innerHTML = l; $('#bLen').value = keepL || String(cfg.dur.cut);
+  $('#presets').innerHTML = [['剪髮','cut'],['染髮','dye'],['燙髮','perm']].map(([n,k]) => `<button type="button" class="ghost" data-len="${cfg.dur[k]}">${n} ${cfg.dur[k]} 分</button>`).join('');
+  $('#presets').querySelectorAll('button').forEach(b => b.onclick = () => { $('#bLen').value = b.dataset.len; });
+  $('#cDate').min = today;
+}
+$('#bAdd').onclick = async () => {
+  const date=$('#bDate').value, start=$('#bStart').value, len=Number($('#bLen').value);
+  if(!date){ toast('請選日期'); return; }
+  const s=toMin(start), e=s+len;
+  if(e > data.config.close && !confirm('這個時段超過營業結束時間，仍要保留嗎？')) return;
+  const clash = data.bookings.concat(data.blocks).filter(x => x.date===date && s < toMin(x.end) && toMin(x.start) < e);
+  if(clash.length && !confirm('這個時段與既有行程重疊（'+clash.map(c=>c.start+'-'+c.end).join('、')+'），仍要保留嗎？')) return;
+  const j = await call('adminAddBlock',{date, start, end:fmtT(e), reason:$('#bReason').value});
+  if(j.ok){ toast('已保留'); $('#bReason').value=''; await refresh(); document.querySelector('[data-t=sched]').click(); } else toast('失敗：'+(j.error||''));
+};
+
+/* closed */
+function renderClosed(){
+  const cw = data.config.closedWeekdays;
+  $('#wds').innerHTML = WD.map((n,i)=>`<label><input type="checkbox" value="${i}" ${cw.indexOf(i)>=0?'checked':''}><span>${n}</span></label>`).join('');
+  $('#cList').innerHTML = data.closedDates.length ? data.closedDates.sort((a,b)=>a.date.localeCompare(b.date)).map(c =>
+    `<div class="item" style="border-left-color:var(--muted)"><div><div class="t">${label(c.date)}</div><div class="m">${esc(c.reason)}</div></div>
+     <button class="ghost" data-delclosed="${esc(c.date)}">重新開放</button></div>`).join('') : '<div class="hint">目前沒有特定休假日。</div>';
+  $('#cList').querySelectorAll('[data-delclosed]').forEach(b => b.onclick = async () => {
+    const j = await call('adminDeleteClosed',{date:b.dataset.delclosed}); toast(j.ok?'已重新開放':'失敗'); refresh();
+  });
+}
+$('#wdSave').onclick = async () => {
+  const v = [...document.querySelectorAll('#wds input:checked')].map(x=>x.value).join(',');
+  const j = await call('adminSaveSettings',{settings:{closedWeekdays:v}}); toast(j.ok?'已儲存':'失敗'); refresh();
+};
+$('#cAdd').onclick = async () => {
+  const date=$('#cDate').value; if(!date){ toast('請選日期'); return; }
+  const j = await call('adminAddClosed',{date, reason:$('#cReason').value});
+  if(j.ok){ toast('已設為不開放'); $('#cReason').value=''; refresh(); } else toast('失敗');
+};
+
+/* settings */
+const SET_TYPES = { openTime:'time', closeTime:'time' };
+function renderSettings(){
+  const S = data.settings;
+  const skip = {closedWeekdays:1};
+  $('#setForm').innerHTML = data.settingDefs.filter(d=>!skip[d.key]).map(d =>
+    `<label class="f"><b>${esc(d.label)}</b><input data-k="${d.key}" type="${SET_TYPES[d.key]||'text'}" value="${esc(S[d.key])}"></label>`).join('') +
+    '<button class="btn" id="setSave">儲存設定</button><p class="hint">改營業時間、服務時間後，預約頁會立即套用；已成立的預約不受影響。</p>';
+  $('#setSave').onclick = async () => {
+    const o = {}; document.querySelectorAll('#setForm [data-k]').forEach(i => o[i.dataset.k] = i.value);
+    const j = await call('adminSaveSettings',{settings:o});
+    toast(j.ok?'已儲存':'失敗：請檢查格式'); refresh();
+  };
+}
+
+/* boot */
+try{ pw = sessionStorage.getItem('adm_pw') || ''; }catch(e){}
+if(pw) tryLogin(true); else $('#login').hidden=false;
+})();
+</script>
+</body>
+</html>
